@@ -44,6 +44,15 @@ For active development with hot reload:
 npm run desktop:dev
 ```
 
+## Build the Mac app
+
+```bash
+npm run package:mac
+```
+
+The app is created at `release/mac-arm64/Mochi Idea Pup.app` on Apple Silicon
+Macs. It is unsigned, which is fine for local use.
+
 ## Deploy
 
 This repository includes a GitHub Pages workflow. Push to `main`, then enable
