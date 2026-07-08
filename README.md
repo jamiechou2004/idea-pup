@@ -38,6 +38,12 @@ This opens Mochi in a transparent, frameless, always-on-top desktop window.
 Drag the puppy or panel header to move it. Click the puppy to open the
 brainstorm panel, use `—` to collapse it, and `×` to quit.
 
+In desktop mode, Mochi uses your local `codex exec` command for brainstorming
+instead of the browser-side Anthropic API key. That means it uses your existing
+Codex login or Codex CLI configuration, and no API key is stored in the app UI.
+Mochi keeps a lightweight Codex home under its app data folder so it does not
+load your full personal Codex plugin and skill setup for each small idea prompt.
+
 For active development with hot reload:
 
 ```bash

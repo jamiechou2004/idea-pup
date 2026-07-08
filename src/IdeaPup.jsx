@@ -34,6 +34,13 @@ async function askClaude(prompt) {
   return JSON.parse(text.replace(/```json|```/g, "").trim());
 }
 
+async function askMochi(prompt) {
+  if (typeof window !== "undefined" && window.mochiDesktop?.askCodex) {
+    return window.mochiDesktop.askCodex(prompt);
+  }
+  return askClaude(prompt);
+}
+
 const RULES = `You are Mochi, a sharp little brainstorming puppy. Be concise and concrete. No emoji inside JSON values. Respond ONLY with valid JSON — no markdown fences, no preamble.`;
 
 const prompts = {
@@ -155,7 +162,7 @@ function Card({ card, topic, index, onUpdate, onSave, saved }) {
     setBusy("remix");
     setErr(false);
     try {
-      const next = await askClaude(prompts.remix(topic, card));
+      const next = await askMochi(prompts.remix(topic, card));
       onUpdate(card.id, { ...card, title: next.title, line: next.line, details: null, open: false });
     } catch { setErr(true); }
     setBusy(null);
@@ -167,7 +174,7 @@ function Card({ card, topic, index, onUpdate, onSave, saved }) {
     setBusy("expand");
     setErr(false);
     try {
-      const next = await askClaude(prompts.expand(topic, card));
+      const next = await askMochi(prompts.expand(topic, card));
       onUpdate(card.id, { ...card, details: next.details, open: true });
     } catch { setErr(true); }
     setBusy(null);
@@ -320,7 +327,7 @@ export default function IdeaPup() {
     setView("ask");
     const wait = new Promise((r) => setTimeout(r, 1100));
     try {
-      const [res] = await Promise.all([askClaude(prompts[kind](q)), wait]);
+      const [res] = await Promise.all([askMochi(prompts[kind](q)), wait]);
       setCards((res.cards || []).slice(0, 3).map((c) => ({ ...c, id: ++uid, details: null, open: false })));
       setPhase("results");
       setMood("happy");
