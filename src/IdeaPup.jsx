@@ -200,6 +200,9 @@ function Card({ card, topic, index, onUpdate, onSave, saved }) {
 /* ── App ─────────────────────────────────────── */
 export default function IdeaPup() {
   const PET_W = 92, PET_H = 82;
+  const desktopPet = typeof window !== "undefined" && (
+    window.location.search.includes("desktop=1") || Boolean(window.mochiDesktop)
+  );
   const [pos, setPos] = useState({ x: null, y: null });
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(false);
@@ -219,8 +222,17 @@ export default function IdeaPup() {
   posRef.current = pos;
 
   useEffect(() => {
+    if (desktopPet) {
+      setPos({ x: 14, y: 18 });
+      return;
+    }
     setPos({ x: window.innerWidth - PET_W - 26, y: window.innerHeight - PET_H - 26 });
-  }, []);
+  }, [desktopPet]);
+
+  useEffect(() => {
+    if (!desktopPet) return;
+    window.mochiDesktop?.setExpanded(open);
+  }, [desktopPet, open]);
 
   /* blink loop */
   useEffect(() => {
@@ -245,8 +257,36 @@ export default function IdeaPup() {
   }, [phase]);
 
   /* drag */
-  const startDrag = (e) => {
+  const startDrag = async (e) => {
     e.preventDefault();
+    if (desktopPet && window.mochiDesktop) {
+      const bounds = await window.mochiDesktop.getWindowBounds();
+      dragRef.current = {
+        desktop: true,
+        dx: e.screenX - bounds.x,
+        dy: e.screenY - bounds.y,
+        sx: e.screenX,
+        sy: e.screenY,
+        moved: false,
+      };
+      const move = (ev) => {
+        const d = dragRef.current;
+        if (!d) return;
+        if (!d.moved && Math.hypot(ev.screenX - d.sx, ev.screenY - d.sy) > 5) d.moved = true;
+        if (d.moved) window.mochiDesktop.moveWindow(ev.screenX - d.dx, ev.screenY - d.dy);
+      };
+      const up = () => {
+        const wasDrag = dragRef.current?.moved;
+        dragRef.current = null;
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+        if (!wasDrag && !open) { setOpen(true); setBadge(false); }
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+      return;
+    }
+
     dragRef.current = { dx: e.clientX - posRef.current.x, dy: e.clientY - posRef.current.y, sx: e.clientX, sy: e.clientY, moved: false };
     const move = (ev) => {
       const d = dragRef.current;
@@ -307,11 +347,17 @@ export default function IdeaPup() {
   };
   const isSaved = (id) => savedCards.some((c) => c.id === id);
 
-  if (pos.x === null) return <div className="deck"><style>{css}</style></div>;
+  if (pos.x === null) return <div className={`deck ${desktopPet ? "desktop-mode" : ""}`}><style>{css}</style></div>;
 
   const onRight = pos.x > window.innerWidth / 2;
   const onBottom = pos.y > window.innerHeight / 2;
-  const panelStyle = {
+  const panelStyle = desktopPet ? {
+    position: "fixed",
+    width: 336,
+    left: 14,
+    top: PET_H + 28,
+    transformOrigin: "left top",
+  } : {
     position: "fixed",
     width: 336,
     ...(onRight ? { right: window.innerWidth - pos.x - PET_W } : { left: pos.x }),
@@ -320,7 +366,7 @@ export default function IdeaPup() {
   };
 
   return (
-    <div className="deck">
+    <div className={`deck ${desktopPet ? "desktop-mode" : ""}`}>
       <style>{css}</style>
       <div className="deck-hint"><b>Mochi</b> naps in the corner — drag him anywhere, click to brainstorm.</div>
 
@@ -357,10 +403,13 @@ export default function IdeaPup() {
                 {phase === "thinking" ? thinkLine : view === "saved" ? "your saved bones" : phase === "results" ? "found these for you!" : "what are you thinking about?"}
               </div>
             </div>
-            <button className={`icon-btn ${view === "saved" ? "on" : ""}`} onClick={() => setView(view === "saved" ? "ask" : "saved")} aria-label="Saved ideas">
+            <button className={`icon-btn ${view === "saved" ? "on" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => setView(view === "saved" ? "ask" : "saved")} aria-label="Saved ideas">
               🦴{savedCards.length > 0 && <span className="count">{savedCards.length}</span>}
             </button>
-            <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Minimize">—</button>
+            <button className="icon-btn" onPointerDown={(e) => e.stopPropagation()} onClick={() => setOpen(false)} aria-label="Minimize">—</button>
+            {desktopPet && (
+              <button className="icon-btn" onPointerDown={(e) => e.stopPropagation()} onClick={() => window.mochiDesktop?.quit()} aria-label="Quit">×</button>
+            )}
           </div>
 
           {view === "ask" ? (
@@ -432,6 +481,14 @@ export default function IdeaPup() {
 const css = `
 @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap');
 
+html, body, #root {
+  margin: 0;
+  min-height: 100%;
+  background: transparent;
+}
+
+body { overflow: hidden; }
+
 .deck {
   --ink: #33302E;
   --soft: #8B857C;
@@ -452,6 +509,14 @@ const css = `
 .deck * { box-sizing: border-box; }
 .deck button { font-family: inherit; cursor: pointer; }
 .deck button:disabled { cursor: default; }
+
+.deck.desktop-mode {
+  background: transparent;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+.deck.desktop-mode .deck-hint { display: none; }
 
 .deck-hint {
   position: fixed; top: 18px; left: 50%; transform: translateX(-50%);

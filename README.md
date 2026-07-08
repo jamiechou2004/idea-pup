@@ -28,6 +28,22 @@ npm run dev
 > which is fine for local prototyping but **not for deployment** — anyone could read
 > your key. For production, proxy requests through a small server instead.
 
+## Run as a desktop pet
+
+```bash
+npm run desktop
+```
+
+This opens Mochi in a transparent, frameless, always-on-top desktop window.
+Drag the puppy or panel header to move it. Click the puppy to open the
+brainstorm panel, use `—` to collapse it, and `×` to quit.
+
+For active development with hot reload:
+
+```bash
+npm run desktop:dev
+```
+
 ## Deploy
 
 This repository includes a GitHub Pages workflow. Push to `main`, then enable
